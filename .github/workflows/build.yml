@@ -131,12 +131,6 @@ jobs:
             <remove-project path="cts" />
             <remove-project path="sdk" />
             <remove-project path="development" />
-            <remove-project path="test/dittosuite" />
-            <remove-project path="test/robolectric-extensions" />
-            <remove-project path="test/app_compat/csuite" />
-            <remove-project path="test/suite_harness" />
-            <remove-project path="test/vts" />
-            <remove-project path="test/vts-testcase/hal" />
             <remove-project path="kernel/prebuilts/6.1/arm64" />
             <remove-project path="kernel/prebuilts/6.6/arm64" />
             <remove-project path="kernel/prebuilts/6.12/arm64" />

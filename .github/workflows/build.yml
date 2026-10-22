@@ -73,7 +73,9 @@ jobs:
                     /usr/local/.ghcup /usr/local/share/powershell \
                     /usr/local/aws-cli /usr/local/aws-sam-cli /usr/lib/mono \
                     /usr/share/java /opt/google /usr/local/julia* \
-                    /usr/local/share/chromium /usr/local/share/vcpkg || true
+                    /usr/local/share/chromium /usr/local/share/vcpkg \
+                    /usr/local/go* /usr/lib/jvm/java-8* /usr/lib/jvm/java-11* /usr/lib/jvm/java-21* \
+                    /var/cache/apt/archives/* /usr/share/doc /usr/share/man || true
           sudo docker system prune -af --volumes 2>/dev/null || true
           sudo rm -rf /var/lib/docker/* 2>/dev/null || true
           sudo swapoff -a 2>/dev/null || true
@@ -121,21 +123,55 @@ jobs:
           mkdir -p "$SRC_DIR"
           cd "$SRC_DIR"
           df -h /
-          # Partial clone keeps .repo small by fetching blobs on demand
-          repo init -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH" --partial-clone
+          # Shallow + partial clone keeps .repo small by fetching blobs on demand
+          repo init -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH" --depth=1 --partial-clone
           
-          # Remove heavy modules not needed for recovery image building to prevent disk exhaustion
+          # Remove heavy modules not needed for recovery image building to prevent disk exhaustion (~30GB savings)
           mkdir -p .repo/local_manifests
           cat > .repo/local_manifests/no-extra.xml <<'XML'
           <manifest>
             <remove-project path="cts" />
             <remove-project path="sdk" />
             <remove-project path="development" />
+            <remove-project path="test/vts" />
+            <remove-project path="test/vts-testcase/hal" />
+            <remove-project path="test/vts-testcase/kernel" />
+            <remove-project path="test/vts-testcase/nbu" />
+            <remove-project path="test/vts-testcase/performance" />
+            <remove-project path="test/vts-testcase/security" />
+            <remove-project path="test/vts-testcase/vndk" />
+            <remove-project path="test/catbox" />
+            <remove-project path="test/cts-root" />
+            <remove-project path="test/mts" />
+            <remove-project path="packages/apps/Car/VoiceControl" />
+            <remove-project path="packages/apps/Car/DataSubscriptionReference" />
+            <remove-project path="packages/apps/Car/References" />
+            <remove-project path="packages/apps/Browser" />
+            <remove-project path="packages/apps/Camera2" />
+            <remove-project path="packages/apps/DeskClock" />
+            <remove-project path="packages/apps/Gallery2" />
+            <remove-project path="packages/apps/Music" />
+            <remove-project path="packages/apps/MusicFX" />
+            <remove-project path="packages/apps/WallpaperPicker2" />
+            <remove-project path="packages/apps/ThemePicker" />
+            <remove-project path="packages/apps/TvSettings" />
+            <remove-project path="packages/apps/TvSystemUI" />
+            <remove-project path="packages/apps/TV" />
             <remove-project path="kernel/prebuilts/6.1/arm64" />
             <remove-project path="kernel/prebuilts/6.6/arm64" />
             <remove-project path="kernel/prebuilts/6.12/arm64" />
             <remove-project path="kernel/prebuilts/common-modules/trusty/6.6/arm64" />
             <remove-project path="kernel/prebuilts/common-modules/trusty/6.12/arm64" />
+            <remove-project path="prebuilts/vndk/v30" />
+            <remove-project path="prebuilts/vndk/v31" />
+            <remove-project path="prebuilts/vndk/v32" />
+            <remove-project path="prebuilts/vndk/v33" />
+            <remove-project path="prebuilts/vndk/v34" />
+            <remove-project path="prebuilts/android-emulator" />
+            <remove-project path="prebuilts/qemu-kernel" />
+            <remove-project path="prebuilts/abi-dumps/platform" />
+            <remove-project path="prebuilts/abi-dumps/vndk" />
+            <remove-project path="prebuilts/abi-dumps/ndk" />
           </manifest>
           XML
           repo sync -c --force-sync --no-clone-bundle --no-tags -j${{ inputs.jobs || '4' }}
@@ -143,16 +179,23 @@ jobs:
 
       - name: Trim disk before build
         run: |
-          du -sh "$SRC_DIR" 2>/dev/null || true
+          echo "Disk before trim:"
+          df -h /
+          # Remove non-Linux prebuilt host toolchains (macOS/Darwin)
+          rm -rf "$SRC_DIR/prebuilts/clang/host/darwin-x86" \
+                 "$SRC_DIR/prebuilts/go/darwin-x86" \
+                 "$SRC_DIR/prebuilts/bazel/darwin-x86_64" 2>/dev/null || true
+          # Prune git pack caches in prebuilts and project-objects
           find "$SRC_DIR/prebuilts" -maxdepth 6 -type d -name .git -prune -exec rm -rf {} + 2>/dev/null || true
           find "$SRC_DIR/.repo/project-objects" -type d -name '*.git' -prune -exec rm -rf {} + 2>/dev/null || true
+          echo "Disk after trim:"
           df -h /
 
       - name: Setup swap memory
         run: |
           sudo swapoff -a 2>/dev/null || true
           sudo rm -f /swapfile 2>/dev/null || true
-          sudo fallocate -l 8G /swapfile
+          sudo fallocate -l 4G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -172,7 +215,7 @@ jobs:
         if: ${{ (inputs.ccache || 'true') == 'true' }}
         run: |
           mkdir -p "$CCACHE_DIR"
-          ccache -M 6G
+          ccache -M 4G
           ccache --zero-stats || true
 
       - name: Copy device tree

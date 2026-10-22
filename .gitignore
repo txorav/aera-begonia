@@ -2,6 +2,7 @@ aosp/
 out/
 .ccache/
 *.img
+!device/xiaomi/begonia/prebuilt/*.img
 *.zip
 *.log
 .repo/

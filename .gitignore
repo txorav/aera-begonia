@@ -1,0 +1,8 @@
+aosp/
+out/
+.ccache/
+*.img
+*.zip
+*.log
+.repo/
+.DS_Store

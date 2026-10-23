@@ -143,14 +143,15 @@ jobs:
           echo "Disk after trim:"
           df -h /
 
-      - name: Setup swap memory
+       - name: Setup swap memory
         run: |
           sudo swapoff -a 2>/dev/null || true
           sudo rm -f /swapfile 2>/dev/null || true
-          sudo fallocate -l 4G /swapfile
+          sudo fallocate -l 8G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
+          sudo sysctl vm.swappiness=10 vm.vfs_cache_pressure=50 2>/dev/null || true
           swapon --show
           free -h
 
@@ -181,7 +182,7 @@ jobs:
         env:
           USE_CCACHE: ${{ inputs.ccache || 'true' }}
           ALLOW_MISSING_DEPENDENCIES: 'true'
-          BUILD_JOBS: ${{ inputs.jobs || '4' }}
+          BUILD_JOBS: ${{ inputs.jobs || '2' }}
           MAKEFILE_NAME: ${{ inputs.makefile || 'twrp_begonia-bp2a-eng' }}
           BUILD_TARGET: ${{ inputs.build_target || 'adbd recoveryimage' }}
           BUILD_USERNAME: ${{ github.actor }}

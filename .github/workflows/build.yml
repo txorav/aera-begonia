@@ -18,7 +18,7 @@ on:
       jobs:
         description: 'Parallel make jobs'
         required: false
-        default: '4'
+        default: '2'
       ccache:
         description: 'Use ccache (true/false)'
         required: false
@@ -126,52 +126,32 @@ jobs:
           # Shallow + partial clone keeps .repo small by fetching blobs on demand
           repo init -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH" --depth=1 --partial-clone
           
-          # Remove heavy modules not needed for recovery image building to prevent disk exhaustion (~30GB savings)
+          # Remove heavy modules not needed for recovery image building to prevent disk exhaustion (~26GB savings)
           mkdir -p .repo/local_manifests
           cat > .repo/local_manifests/no-extra.xml <<'XML'
           <manifest>
-            <remove-project path="cts" />
-            <remove-project path="sdk" />
-            <remove-project path="development" />
-            <remove-project path="test/vts" />
-            <remove-project path="test/vts-testcase/hal" />
-            <remove-project path="test/vts-testcase/kernel" />
-            <remove-project path="test/vts-testcase/nbu" />
-            <remove-project path="test/vts-testcase/performance" />
-            <remove-project path="test/vts-testcase/security" />
-            <remove-project path="test/vts-testcase/vndk" />
-            <remove-project path="test/catbox" />
-            <remove-project path="test/cts-root" />
-            <remove-project path="test/mts" />
-            <remove-project path="packages/apps/Car/VoiceControl" />
-            <remove-project path="packages/apps/Car/DataSubscriptionReference" />
-            <remove-project path="packages/apps/Car/References" />
-            <remove-project path="packages/apps/Browser" />
-            <remove-project path="packages/apps/Camera2" />
-            <remove-project path="packages/apps/DeskClock" />
-            <remove-project path="packages/apps/Gallery2" />
-            <remove-project path="packages/apps/Music" />
-            <remove-project path="packages/apps/MusicFX" />
-            <remove-project path="packages/apps/WallpaperPicker2" />
-            <remove-project path="packages/apps/ThemePicker" />
-            <remove-project path="packages/apps/TvSettings" />
-            <remove-project path="packages/apps/TvSystemUI" />
-            <remove-project path="packages/apps/TV" />
-            <remove-project path="kernel/prebuilts/6.1/arm64" />
-            <remove-project path="kernel/prebuilts/6.6/arm64" />
-            <remove-project path="kernel/prebuilts/6.12/arm64" />
-            <remove-project path="kernel/prebuilts/common-modules/trusty/6.6/arm64" />
-            <remove-project path="kernel/prebuilts/common-modules/trusty/6.12/arm64" />
-            <remove-project path="prebuilts/vndk/v30" />
-            <remove-project path="prebuilts/vndk/v31" />
-            <remove-project path="prebuilts/vndk/v32" />
-            <remove-project path="prebuilts/vndk/v33" />
-            <remove-project path="prebuilts/vndk/v34" />
-            <remove-project path="prebuilts/android-emulator" />
-            <remove-project path="prebuilts/qemu-kernel" />
-            <remove-project path="prebuilts/abi-dumps/platform" />
-            <remove-project path="prebuilts/abi-dumps/vndk" />
-            <remove-project path="prebuilts/abi-dumps/ndk" />
+            <remove-project name="platform/cts" />
+            <remove-project name="platform/sdk" />
+            <remove-project name="platform/development" />
+            <remove-project name="platform/test/vts" />
+            <remove-project name="platform/test/vts-testcase/hal" />
+            <remove-project name="platform/test/vts-testcase/kernel" />
+            <remove-project name="platform/test/vts-testcase/nbu" />
+            <remove-project name="platform/test/vts-testcase/performance" />
+            <remove-project name="platform/test/vts-testcase/security" />
+            <remove-project name="platform/test/vts-testcase/vndk" />
+            <remove-project name="platform/prebuilts/vndk/v30" />
+            <remove-project name="platform/prebuilts/vndk/v31" />
+            <remove-project name="platform/prebuilts/vndk/v32" />
+            <remove-project name="platform/prebuilts/vndk/v33" />
+            <remove-project name="platform/prebuilts/vndk/v34" />
+            <remove-project name="platform/prebuilts/android-emulator" />
+            <remove-project name="platform/prebuilts/qemu-kernel" />
+            <remove-project name="kernel/prebuilts/6.1/arm64" />
+            <remove-project name="kernel/prebuilts/6.6/arm64" />
+            <remove-project name="kernel/prebuilts/6.12/arm64" />
+            <remove-project name="kernel/prebuilts/common-modules/trusty/6.6/arm64" />
+            <remove-project name="kernel/prebuilts/common-modules/trusty/6.12/arm64" />
           </manifest>
           XML
           repo sync -c --force-sync --no-clone-bundle --no-tags -j${{ inputs.jobs || '4' }}

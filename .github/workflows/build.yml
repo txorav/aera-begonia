@@ -124,37 +124,9 @@ jobs:
           cd "$SRC_DIR"
           df -h /
           # Shallow + partial clone keeps .repo small by fetching blobs on demand
+          # The upstream AERA manifest already includes remove-minimal.xml natively
           repo init -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH" --depth=1 --partial-clone
-          
-          # Remove heavy modules not needed for recovery image building to prevent disk exhaustion (~26GB savings)
-          mkdir -p .repo/local_manifests
-          cat > .repo/local_manifests/no-extra.xml <<'XML'
-          <manifest>
-            <remove-project name="platform/cts" />
-            <remove-project name="platform/sdk" />
-            <remove-project name="platform/development" />
-            <remove-project name="platform/test/vts" />
-            <remove-project name="platform/test/vts-testcase/hal" />
-            <remove-project name="platform/test/vts-testcase/kernel" />
-            <remove-project name="platform/test/vts-testcase/nbu" />
-            <remove-project name="platform/test/vts-testcase/performance" />
-            <remove-project name="platform/test/vts-testcase/security" />
-            <remove-project name="platform/test/vts-testcase/vndk" />
-            <remove-project name="platform/prebuilts/vndk/v30" />
-            <remove-project name="platform/prebuilts/vndk/v31" />
-            <remove-project name="platform/prebuilts/vndk/v32" />
-            <remove-project name="platform/prebuilts/vndk/v33" />
-            <remove-project name="platform/prebuilts/vndk/v34" />
-            <remove-project name="platform/prebuilts/android-emulator" />
-            <remove-project name="platform/prebuilts/qemu-kernel" />
-            <remove-project name="kernel/prebuilts/6.1/arm64" />
-            <remove-project name="kernel/prebuilts/6.6/arm64" />
-            <remove-project name="kernel/prebuilts/6.12/arm64" />
-            <remove-project name="kernel/prebuilts/common-modules/trusty/6.6/arm64" />
-            <remove-project name="kernel/prebuilts/common-modules/trusty/6.12/arm64" />
-          </manifest>
-          XML
-          repo sync -c --force-sync --no-clone-bundle --no-tags -j${{ inputs.jobs || '4' }}
+          repo sync -c --force-sync --no-clone-bundle --no-tags -j${{ inputs.jobs || '2' }}
           df -h /
 
       - name: Trim disk before build

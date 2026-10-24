@@ -154,6 +154,9 @@ jobs:
           mkdir -p "$SRC_DIR/device/xiaomi"
           rm -rf "$SRC_DIR/device/xiaomi/begonia"
           cp -a device/xiaomi/begonia "$SRC_DIR/device/xiaomi/begonia"
+          if [ -x "$SRC_DIR/device/xiaomi/begonia/package_fox_addons.sh" ]; then
+            "$SRC_DIR/device/xiaomi/begonia/package_fox_addons.sh"
+          fi
 
       - name: Prepare Wi-Fi and networking sources
         run: |
@@ -217,16 +220,26 @@ jobs:
             exit 1
           fi
           export TARGET_PRODUCT TARGET_BUILD_VARIANT TARGET_BUILD_TYPE
-          mka -j"$BUILD_JOBS" libssl $BUILD_TARGET 2>&1 | tee -a build.log
+          mka -j"$BUILD_JOBS" $BUILD_TARGET 2>&1 | tee -a build.log
 
           # Ensure libssl.so is bundled into recovery ramdisk for wpa_supplicant
           REC_ROOT="out/target/product/begonia/recovery/root/system/lib64"
           SYS_LIB="out/target/product/begonia/system/lib64"
-          if [ -f "$SYS_LIB/libssl.so" ] && [ ! -f "$REC_ROOT/libssl.so" ]; then
-            echo "Relinking libssl.so into recovery ramdisk..."
-            mkdir -p "$REC_ROOT"
-            cp -fp "$SYS_LIB/libssl.so" "$REC_ROOT/"
-            mka -j"$BUILD_JOBS" $BUILD_TARGET 2>&1 | tee -a build.log
+          if [ ! -f "$REC_ROOT/libssl.so" ]; then
+            SSL_FOUND=""
+            if [ -f "$SYS_LIB/libssl.so" ]; then
+              SSL_FOUND="$SYS_LIB/libssl.so"
+            else
+              SSL_FOUND=$(find out/target/product/begonia -name "libssl.so" ! -path "*/recovery/*" 2>/dev/null | head -n 1 || true)
+            fi
+            if [ -n "$SSL_FOUND" ] && [ -f "$SSL_FOUND" ]; then
+              echo "Relinking libssl.so ($SSL_FOUND) into recovery ramdisk..."
+              mkdir -p "$REC_ROOT"
+              cp -fp "$SSL_FOUND" "$REC_ROOT/libssl.so"
+              mka -j"$BUILD_JOBS" $BUILD_TARGET 2>&1 | tee -a build.log
+            else
+              echo "Warning: libssl.so not found in target output; checking recovery linkage"
+            fi
           fi
 
       - name: Show ccache stats
@@ -237,33 +250,35 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: orangefox-begonia-build-log
+          name: aera-begonia-build-log
           path: ${{ env.SRC_DIR }}/build.log
           if-no-files-found: ignore
 
       - name: Package Fox Addons into OrangeFox Zip
         if: success()
         run: |
-          OUT_DIR="${{ env.SRC_DIR }}/out/target/product/begonia"
-          ADDONS_DIR="device/xiaomi/begonia/addons"
-          for z in "$OUT_DIR"/OrangeFox-*.zip; do
+          OUT_DIR="$(realpath "${{ env.SRC_DIR }}/out/target/product/begonia" 2>/dev/null || echo "$GITHUB_WORKSPACE/${{ env.SRC_DIR }}/out/target/product/begonia")"
+          ADDONS_DIR="$(realpath "device/xiaomi/begonia/addons" 2>/dev/null || echo "$GITHUB_WORKSPACE/device/xiaomi/begonia/addons")"
+          find "$OUT_DIR" -maxdepth 1 -name "*.zip" | while read -r z; do
             [ -f "$z" ] || continue
-            echo "Injecting Fox Addons into $z..."
+            abs_z="$(realpath "$z")"
+            echo "Injecting Fox Addons into $abs_z..."
             STAGE=$(mktemp -d)
             mkdir -p "$STAGE/sdcard/Fox/FoxFiles/FoxAddons"
-            cp -f "$ADDONS_DIR"/*.zip "$STAGE/sdcard/Fox/FoxFiles/FoxAddons/"
-            (cd "$STAGE" && zip -u "$z" sdcard/Fox/FoxFiles/FoxAddons/*.zip)
+            cp -f "$ADDONS_DIR"/*.zip "$STAGE/sdcard/Fox/FoxFiles/FoxAddons/" 2>/dev/null || true
+            (cd "$STAGE" && zip -u "$abs_z" sdcard/Fox/FoxFiles/FoxAddons/*.zip) || true
             rm -rf "$STAGE"
-            md5sum "$z" | awk '{print $1}' > "${z}.md5"
+            md5sum "$abs_z" | awk '{print $1}' > "${abs_z}.md5" 2>/dev/null || true
           done
 
       - name: Upload recovery artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: orangefox-begonia-recovery
+          name: aera-begonia-recovery
           path: |
-            ${{ env.SRC_DIR }}/out/target/product/begonia/OrangeFox-*.zip
+            ${{ env.SRC_DIR }}/out/target/product/begonia/*.zip
+            ${{ env.SRC_DIR }}/out/target/product/begonia/*.md5
             ${{ env.SRC_DIR }}/out/target/product/begonia/recovery.img
           if-no-files-found: warn
 
@@ -272,7 +287,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ env.SRC_DIR }}/out/target/product/begonia/OrangeFox-*.zip
+            ${{ env.SRC_DIR }}/out/target/product/begonia/*.zip
+            ${{ env.SRC_DIR }}/out/target/product/begonia/*.md5
             ${{ env.SRC_DIR }}/out/target/product/begonia/recovery.img
           generate_release_notes: true
 

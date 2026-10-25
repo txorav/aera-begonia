@@ -1,4 +1,4 @@
-name: Deliver OrangeFox Artifacts
+name: Deliver AERA Artifacts
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
       run_id:
         description: 'Run ID to deliver'
         required: false
-        default: '39992577944'
+        default: '40125127321'
         type: string
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           mkdir -p delivered_artifacts
-          TARGET_RUN="${{ github.event.inputs.run_id || '39992577944' }}"
+          TARGET_RUN="${{ github.event.inputs.run_id || '40125127321' }}"
           echo "Downloading artifacts from run: $TARGET_RUN"
           gh run download "$TARGET_RUN" -R "${{ github.repository }}" -D delivered_artifacts/
           echo "Downloaded contents:"
@@ -41,13 +41,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          TAG="R12.0-begonia-$(date +%Y%m%d-%H%M)"
+          TAG="AERA-begonia-$(date +%Y%m%d-%H%M)"
           FILES=$(find delivered_artifacts/ -type f \( -name "*.zip" -o -name "*.img" \))
           echo "Release files: $FILES"
-          NOTE=$(printf "OrangeFox Recovery R12.0 for Redmi Note 8 Pro (begonia)\n\n- Source Build Run: %s\n- Decryption: FBE v1 aes-256-cts:v1 supported\n- Flashlight: /sys/class/leds/torch-light0 node\n- Wi-Fi: Native wpa_supplicant built\n- Root Manager: APatch & Magisk detection enabled\n" "${{ github.event.inputs.run_id || '39992577944' }}")
+          NOTE=$(printf "AERA Recovery for Redmi Note 8 Pro (begonia)\n\n- Source Build Run: %s\n- Decryption: FBE v1 aes-256-cts:v1 supported\n- Flashlight: /sys/class/leds/torch-light0 node\n- Wi-Fi: Native wpa_supplicant & Fox Wi-Fi Touch UI built\n- Root Manager: APatch & Magisk detection enabled\n" "${{ github.event.inputs.run_id || '40125127321' }}")
           gh release create "$TAG" $FILES \
             --repo "${{ github.repository }}" \
-            --title "OrangeFox Recovery R12.0 - Begonia ($TAG)" \
+            --title "AERA Recovery - Begonia ($TAG)" \
             --notes "$NOTE"
           echo "release_tag=$TAG" >> $GITHUB_OUTPUT
 

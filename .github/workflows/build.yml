@@ -1,4 +1,4 @@
-name: OrangeFox Recovery Build (begonia)
+name: AERA Recovery Build (begonia)
 
 on:
   workflow_dispatch:
@@ -44,7 +44,7 @@ env:
 
 jobs:
   build:
-    name: Build OrangeFox Recovery for Redmi Note 8 Pro (begonia)
+    name: Build AERA Recovery for Redmi Note 8 Pro (begonia)
     runs-on: ubuntu-22.04
     timeout-minutes: 360
 
